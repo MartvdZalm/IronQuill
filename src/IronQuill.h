@@ -7,15 +7,25 @@
 #include <GLFW/glfw3.h>
 #include "ImGuiFileDialog.h"
 
+#include <vector>
+#include <iostream>
+#include <fstream>
+#include <cstring>
+
 class Options
 {
 public:
     bool ShowMainMenuBar = true;
+    bool ShowDocuments = true;
 };
 
 class Document
 {
-
+public:
+	std::string filePath;
+	std::size_t fileSize;
+	char* content;
+	bool fullscreen = false;
 };
 
 class IronQuill
@@ -33,7 +43,8 @@ public:
 	void ProgramLoop();
 	void TextEditor();
 	void ShowMainMenuBar();
-	void OpenFile(const std::string& filename);
+	void ShowDocuments(bool* p_open);
+	void OpenFile(const std::string& filePath);
 };
 
 #endif

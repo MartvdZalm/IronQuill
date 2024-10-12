@@ -54,7 +54,7 @@ int IronQuill::CreateWindow()
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable keyboard controls
 
     // Setup ImGui style
-    ImGui::StyleColorsDark();
+    ImGui::StyleColorsLight();
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
@@ -93,6 +93,7 @@ void IronQuill::ProgramLoop()
         ImGui::NewFrame();
 
         if (options->ShowMainMenuBar) { ShowMainMenuBar(); }
+        if (options->ShowDocuments && !documents.empty()) { ShowDocuments(&options->ShowDocuments); }
 
         if (mainWindow)
         {
@@ -134,9 +135,6 @@ void IronQuill::ShowMainMenuBar()
             if (ImGui::MenuItem("New File", "CTRL+N")) {}
             if (ImGui::MenuItem("Open File", "CTRL+O"))
             {
-                IGFD::FileDialogConfig config;
-                // config.directory = ".";
-
                 ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", ".txt,.cpp");
             }
             if (ImGui::MenuItem("Open Folder", NULL)) {}
@@ -165,13 +163,71 @@ void IronQuill::ShowMainMenuBar()
         if (ImGuiFileDialog::Instance()->IsOk())
         {
             std::string filePath = ImGuiFileDialog::Instance()->GetFilePathName();
-            // OpenFile(filePath);
+            OpenFile(filePath);
         }
         ImGuiFileDialog::Instance()->Close();
     }
 }
 
-void IronQuill::OpenFile(const std::string& filename)
+void IronQuill::ShowDocuments(bool* p_open)
 {
+    // for (int i = 0; i < documents.Size; i++)
+    // {
+        Document* doc = &documents[0];
+        static std::string textBuffer(doc->content, 20000);
 
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImVec2 viewportSize = viewport->Size;
+
+        ImGui::PushID(doc);
+
+        if (doc->fullscreen)
+        {
+            ImGui::SetNextWindowSize(viewportSize, ImGuiCond_Always);
+            ImGui::SetNextWindowPos(viewport->Pos, ImGuiCond_Always);
+        }
+
+        ImGui::Begin("Document", p_open, doc->fullscreen ? ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove : 0);
+
+        if (ImGui::Button(doc->fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"))
+        {
+            doc->fullscreen = !doc->fullscreen;
+        }
+
+        ImVec2 windowSize = ImGui::GetContentRegionAvail();
+        windowSize.y -= ImGui::GetStyle().ItemSpacing.y;
+
+        if (ImGui::InputTextMultiline("##editor", &textBuffer[0], textBuffer.size() + 1, windowSize, ImGuiInputTextFlags_AllowTabInput))
+        {
+            doc->content = textBuffer.data();
+        }
+
+        ImGui::End();
+        ImGui::PopID();
+    // }
+}
+
+void IronQuill::OpenFile(const std::string& filePath)
+{
+    Document document;
+
+    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+    if (!file.is_open())
+    {
+        std::cerr << "Error: Could not open the file!" << std::endl;
+        return;
+    }
+
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    char* buffer = new char[size + 1];
+    if (file.read(buffer, size))
+    {
+        buffer[size] = '\0';
+        document.fileSize = size;
+        document.content = buffer;
+    }
+
+    documents.push_back(document);
 }
